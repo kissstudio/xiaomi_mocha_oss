@@ -2,13 +2,22 @@ ROOT_DIR=$(pwd)
 OUT_DIR=$ROOT_DIR/out
 MODULES_DIR=$OUT_DIR/modules
 ANYKERNEL_DIR=$ROOT_DIR/AnyKernel2
+OUT_FILE=MochaKernel-$(date +%F).zip
+
+
+
 
 FUNC_MAKEZIP()
 {
-	echo -e "\e[95mCloning AnyKernel2 git..."
-	git clone "https://github.com/osm0sis/AnyKernel2" $ANYKERNEL_DIR
+    if [ -d $ANYKERNEL_DIR/.github ];then
+        cd $ANYKERNEL_DIR && git clean -fd
+        cd ..
+    else    
+        echo -e "\e[95mCloning AnyKernel2 git..."
+        git clone --depth=1 "https://github.com/osm0sis/AnyKernel2" $ANYKERNEL_DIR
+    fi
 	echo -e "\e[95mModifying it for your device..."
-	FILE=$ROOT_DIR/AnyKernel2/anykernel.sh
+	FILE=$ANYKERNEL_DIR/anykernel.sh
 	cp $MODULES_DIR/* $ANYKERNEL_DIR/modules/
 	/bin/cat << EOF >$FILE
     kernel.string=Kernel by Nihhaar @ xda-developers
@@ -43,12 +52,35 @@ EOF
 	echo -e "\e[95mMaking kernel.zip file..."
 	cd AnyKernel2
 	rm -rf zImage
-	cp $OUT_DIR/zImage zImage
-	zip -r9 MochaKernel-$(date +%F).zip * -x README MochaKernel-$(date +%F).zip
-	mv MochaKernel-$(date +%F).zip $OUT_DIR
+	cp $OUT_DIR/zImage zImage && echo "...zImage file copied."
+    if [ -f $OUT_DIR/dtb ];then 
+        mkdir -p $ANYKERNEL_DIR/kernel
+        cp $OUT_DIR/dtb $ANYKERNEL_DIR/kernel/dtb && echo "...dtb file copied."
+        
+    fi
+    echo "...zip archive"
+	zip -r9 $OUT_FILE * -x README $OUT_FILE > ../zip.output 2>&1
+	mv $OUT_FILE $OUT_DIR
 	cd ..
-	echo -e "\e[34mDone! Now Collect ur zip file.\n"
+	echo -e "\e[34mzip compression Done! $OUT_DIR/$OUT_FILE.\n"
 	
+}
+FUN_ADB_PUSH(){
+    echo -e -n "\e[33madb push to /sdcard (y/n)? "
+    old_stty_cfg=$(stty -g)
+    stty raw -echo
+    answer=$( while ! head -c 1 | grep -i '[ny]' ;do true ;done )
+    stty $old_stty_cfg
+
+    if echo "$answer" | grep -iq "^y" ;then
+        echo -e "\n"
+        adb push $OUT_DIR/$OUT_FILE /sdcard
+        return 0
+    else
+        echo -e "...user canceled.\n"
+        return 0
+    fi
 }
 
 FUNC_MAKEZIP
+FUN_ADB_PUSH

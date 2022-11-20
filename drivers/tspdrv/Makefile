@@ -31,6 +31,8 @@ ifeq ($(KERNEL_ROOT),)
 endif
 
 EXTRA_CFLAGS += -I$(M)
+EXTRA_CFLAGS += -DSRCBASE=\"$(src)\"
+EXTRA_CFLAGS += -I$(src)/include/ -I$(src)/
 
 obj-$(CONFIG_TSPDRV) += tspdrv.o
 
